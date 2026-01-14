@@ -66,7 +66,8 @@ def run_experiment_with_gamma(gamma_val, req_count, topo_mgr, traffic_gen, vtm, 
         
         # B. 加载流量 (注意：这里使用传入的 req_count)
         # 流量文件会自动命名为 requests_T{t}_N{req_count}.json，不会冲突
-        traffic_dir = os.path.join("data", "traffic_cache_sensitivity")
+        # traffic_dir = os.path.join("data", "traffic_cache_sensitivity")
+        traffic_dir = os.path.join("data", "traffic_cache_load_analysis") # 用和全局业务量分析一样的业务流
         requests = manage_traffic(traffic_gen, G_phy, t, req_count, traffic_dir)
         
         # C. 批量处理业务

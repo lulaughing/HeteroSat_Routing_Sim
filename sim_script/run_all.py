@@ -13,10 +13,16 @@ import time
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
-# [关键] 在导入 SESSION_DIR 之前，可以根据需要手动设置环境变量
-# 这样 SESSION_DIR 的初始化就会读取到这个值
+# [关键] 设置仿真时间窗口
+# 如果只想跑特定时间点（如 300s）的拓扑，可以设置 START=300, DURATION=1, STEP=1
+if 'HETEROSAT_SIM_START' not in os.environ:
+    os.environ['HETEROSAT_SIM_START'] = '300'
+if 'HETEROSAT_SIM_DURATION' not in os.environ:
+    os.environ['HETEROSAT_SIM_DURATION'] = '1'
+if 'HETEROSAT_TIME_STEP' not in os.environ:
+    os.environ['HETEROSAT_TIME_STEP'] = '1'
 if 'HETEROSAT_REQUESTS_PER_STEP' not in os.environ:
-    os.environ['HETEROSAT_REQUESTS_PER_STEP'] = '100' # 默认值
+    os.environ['HETEROSAT_REQUESTS_PER_STEP'] = '300' #业务条数
 
 from src.utils import SESSION_DIR, ANCHOR_FILE
 
@@ -61,25 +67,29 @@ def main():
     print(f"🌟 [Master] Simulation Suite Started.")
     print(f"📂 Results will be saved in: {SESSION_DIR}")
     
-    for script in scripts:
-        ret = run_script(script)
-        if ret != 0:
-            print(f"⚠️ [Master] Stopping execution due to error in {script}")
-            break
-            
-    # 运行结束，清理锚点文件，以便下次运行生成新 session
-    if os.path.exists(ANCHOR_FILE):
-        try:
-            os.remove(ANCHOR_FILE)
-            print(f"\n🧹 [Master] Anchor file cleared. Next run will create a new session.")
-        except Exception as e:
-            print(f"⚠️ [Master] Failed to clear anchor file: {e}")
+    try:
+        # 顺序执行各算法脚本
+        for script in scripts:
+            ret = run_script(script)
+            if ret != 0:
+                print(f"⚠️ [Master] Stopping execution due to error in {script}")
+                # 注意：这里 break 后会直接进入 finally 块清理文件
+                break
+                
+        duration = time.time() - t_start
+        print(f"\n" + "="*60)
+        print(f"🏁 [Master] All Simulations Completed in {duration:.1f}s.")
+        print(f"📁 Session Directory: {SESSION_DIR}")
+        print("="*60)
 
-    duration = time.time() - t_start
-    print(f"\n" + "="*60)
-    print(f"🏁 [Master] All Simulations Completed in {duration:.1f}s.")
-    print(f"📁 Session Directory: {SESSION_DIR}")
-    print("="*60)
+    finally:
+        # [关键修改] 使用 finally 块确保无论何种情况退出（正常/报错/中断），都会执行清理
+        if os.path.exists(ANCHOR_FILE):
+            try:
+                os.remove(ANCHOR_FILE)
+                print(f"\n🧹 [Master] Anchor file cleared. Next run will create a new session.")
+            except Exception as e:
+                print(f"⚠️ [Master] Failed to clear anchor file: {e}")
 
 if __name__ == "__main__":
     main()

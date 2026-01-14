@@ -30,11 +30,12 @@ def main():
 
     # [配置] 获取仿真参数
     cfg = get_sim_config()
+    sim_start = cfg['SIM_START']
     sim_duration = cfg['SIM_DURATION']
     time_step = cfg['TIME_STEP']
     req_count = cfg['REQUESTS_PER_STEP']
     
-    print(f"   ⚙️ Config: Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
+    print(f"   ⚙️ Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
     
     topo_mgr = TopologyManager()
     traffic_gen = TrafficGenerator(topo_mgr)
@@ -47,7 +48,7 @@ def main():
     # [新增] 记录详细路径信息
     f_path = open(os.path.join(LOG_DIR, "dijkstra_qos_paths.txt"), 'w', encoding='utf-8')
     
-    for t in range(0, sim_duration, time_step): 
+    for t in range(sim_start, sim_start + sim_duration, time_step): 
         G = topo_mgr.get_graph_at_time(t)
         
         # 加载流量
