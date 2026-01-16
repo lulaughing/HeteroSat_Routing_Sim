@@ -9,7 +9,7 @@ import numpy as np
 from src.routing.strategy import RoutingStrategy
 
 class SGAStrategy(RoutingStrategy):
-    def __init__(self, pop_size=20, max_iter=10, pc=0.8, pm=0.2):
+    def __init__(self, pop_size=40, max_iter=30, pc=0.8, pm=0.2):
         # [优化] 减少 max_iter (15->10)，因为 SGA 陷入拥塞后很难进化出来，跑久了浪费时间
         self.pop_size = pop_size
         self.max_iter = max_iter

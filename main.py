@@ -23,18 +23,30 @@ from src.routing.hierarchical_mapper import VirtualTopologyManager
 from src.routing.inter_algo import InterDomainAlgorithm
 from config.settings import RESULTS_DIR
 
+from src.simulation_utils import (
+    manage_traffic, 
+    log_network_snapshot, 
+    decompose_and_execute_hierarchical,
+    get_sim_config,
+    ensure_dir
+)
+from src.routing.sga import SGAStrategy
+
 # 获取日志句柄
 flog = get_flow_logger()
 nlog = get_net_logger()
 
 # ==========================================
-# [配置] 仿真参数
+# [配置] 仿真参数 (从工具类获取全局配置)
 # ==========================================
-SIM_DURATION = 5      # 只跑 T=0 切片
-TIME_STEP = 5         
-REQUESTS_PER_STEP = 150 # 保持高压
-USE_EXISTING_TRAFFIC = False 
-TRAFFIC_DATA_DIR = os.path.join("data", "traffic")
+cfg = get_sim_config()
+SIM_START = cfg['SIM_START']
+SIM_DURATION = cfg['SIM_DURATION']
+TIME_STEP = cfg['TIME_STEP']
+REQUESTS_PER_STEP = cfg['REQUESTS_PER_STEP']
+
+USE_EXISTING_TRAFFIC = True 
+TRAFFIC_DATA_DIR = os.path.join("data", "traffic_cache_main")
 ROUTING_INFO_DIR = os.path.join(SESSION_DIR, 'routing_info')
 
 SERVICE_TYPES = {

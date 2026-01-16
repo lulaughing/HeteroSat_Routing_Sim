@@ -27,7 +27,7 @@ def find_latest_load_analysis_dir(logs_root):
     
     # 按修改时间取最新
     latest_dir = max(candidate_dirs, key=os.path.getmtime)
-    print(f"✅ 使用最新负载分析目录: {os.path.basename(latest_dir)}")
+    
     return latest_dir
 
 def plot_load_sensitivity(df, save_path):
@@ -73,6 +73,9 @@ def plot_load_sensitivity(df, save_path):
 def main():
     # 1. 找到最新的 load_analysis 目录
     latest_dir = find_latest_load_analysis_dir(LOGS_ROOT)
+    # latest_dir = r'F:\HeteroSat_Routing_Sim\sim_script\logs\load_analysis_20260114_135615'
+
+    print(f"✅ 使用负载分析目录: {os.path.basename(latest_dir)}")
     
     # 2. 读取 summary_all_loads.csv
     csv_path = os.path.join(latest_dir, "summary_all_loads.csv")

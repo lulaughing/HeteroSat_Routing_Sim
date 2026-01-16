@@ -8,11 +8,14 @@ import logging
 import os
 import sys
 from datetime import datetime
+from src.simulation_utils import get_sim_config
 
 # 基础日志根目录
 LOG_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
 if not os.path.exists(LOG_ROOT):
     os.makedirs(LOG_ROOT)
+
+
 
 # ==========================================
 # [增量修改] 会话目录管理 (锚点机制)
@@ -28,6 +31,7 @@ def _get_or_create_session_dir():
                 existing_path = f.read().strip()
             # 二次确认目录确实存在
             if os.path.exists(existing_path):
+                print(f"日志目录存在: {existing_path}")
                 return existing_path
         except Exception:
             pass # 读取出错就降级到新建
@@ -36,8 +40,12 @@ def _get_or_create_session_dir():
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # [新增] 获取业务条数参数，加入目录名
-    req_count = os.environ.get('HETEROSAT_REQUESTS_PER_STEP', '300')
-    session_name = f"session_{session_id}_N{req_count}"
+    cfg = get_sim_config()
+    sim_start = cfg['SIM_START']
+    sim_duration = cfg['SIM_DURATION']
+    time_step = cfg['TIME_STEP']
+    req_count = cfg['REQUESTS_PER_STEP']
+    session_name = f"session_{session_id}_T{sim_start}_N{req_count}"
     
     new_dir = os.path.join(LOG_ROOT, session_name)
     if not os.path.exists(new_dir):

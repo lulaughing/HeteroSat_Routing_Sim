@@ -3,7 +3,7 @@ import os
 
 ANCHOR_FILE = os.path.join("logs", "current_session.txt")
 
-def main():
+def del_anchor_file():
     if os.path.exists(ANCHOR_FILE):
         try:
             os.remove(ANCHOR_FILE)
@@ -15,4 +15,4 @@ def main():
         print("ℹ️ 当前没有活跃的会话，无需重置。")
 
 if __name__ == "__main__":
-    main()
+    del_anchor_file()

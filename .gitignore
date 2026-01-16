@@ -1,82 +1,26 @@
 # =============================================================================
 # HeteroSat_Routing_Sim .gitignore
-# 只保留关键源代码、算法实现、仿真脚本及配置，排除大文件、缓存、日志和生成结果
+# 根据用户要求，仅排除特定的大型数据、日志及备份文件
 # =============================================================================
 
-# 1. Python 运行环境与编译文件
-# ---------------------------------------------------------
+# 1. Python 编译缓存 (匹配所有目录下的 __pycache__)
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# 2. 仿真数据与缓存 (重点排除)
-# ---------------------------------------------------------
-# 排除所有处理后的拓扑缓存 (如 .pkl 文件)
-data/processed/
-data/traffic/
-data/routing_info/
-*.pkl
-
-# 排除原始 STK 导出的大型数据文件 (建议保留目录结构但排除内容)
-data/raw_stk/**/*
-!data/raw_stk/.gitkeep
-
-# 排除生成的仿真结果
-data/results/
-
-# 排除流量请求的 JSON 缓存 (数量多且文件大)
-sim_script/data/
-test/data/test_traffic/
-
-# 3. 日志文件 (重点排除)
-# ---------------------------------------------------------
+# 2. 数据与日志目录 (排除整个目录)
+data/
 logs/
-sim_script/logs/
-*.log
-current_session.txt
 
-# 4. 可视化结果 (图片与统计 CSV)
-# ---------------------------------------------------------
-# 排除生成的 PNG 图像
-plot/**/*.png
-# 排除生成的汇总统计 CSV (保留脚本即可)
-plot/**/*.csv
-plot/gamma/*.csv
-plot/gamma/*.png
-plot/session_*/
+# 3. 备份文件 (.bak)
+*.bak
+main.py.bak
+src/traffic.py.bak
 
-# 5. 编辑器与系统临时文件
-# ---------------------------------------------------------
+# 4. 操作系统与编辑器临时文件 (建议保留以保持仓库整洁)
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 *.swp
-*.bak
 *.tmp
-
-# 6. 项目备份文件 (如 main.py.bak 等)
-# ---------------------------------------------------------
-*.py.bak
-main.py.bak
-src/traffic.py.bak

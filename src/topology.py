@@ -167,7 +167,7 @@ class TopologyManager:
         # =========================================================
         # 地面站接收能力极强，不应成为瓶颈
         if 'Ground' in types:
-            return 500 # Mbps
+            return 100 # Mbps
             
         # =========================================================
         # 第二层级：高轨骨干 (GEO/MEO Backbone)
@@ -175,7 +175,7 @@ class TopologyManager:
         # MEO-MEO, GEO-GEO, MEO-GEO
         # 这是核心骨干网，带宽极大
         if ('MEO' in types or 'GEO' in types) and not ('LEO' in types or 'Detect' in types):
-            return 300 # Mbps (足够容纳 6条并发遥感流)
+            return 100 # Mbps (足够容纳 6条并发遥感流)
             
         # =========================================================
         # 第三层级：跨层接入 (Cross-Layer Access) - 关键瓶颈
@@ -184,7 +184,7 @@ class TopologyManager:
         # 或者是 GEO 接入 (如果有)
         # 这里是 H-IGA 发挥优势的地方：寻找空闲的接入时隙
         if ('MEO' in types or 'GEO' in types) and ('LEO' in types or 'Detect' in types):
-            return 150 # Mbps (能容纳 3条并发遥感流，第4条就会堵)
+            return 60 # Mbps (能容纳 3条并发遥感流，第4条就会堵)
             
         # =========================================================
         # 第四层级：低轨 & 探测层互联 (Low Orbit & Sensing Layer)
@@ -199,12 +199,12 @@ class TopologyManager:
         # 4.2 Detect -> Detect (同层 ISL)
         # 探测卫星间协作能力弱
         if type_u == 'Detect' and type_v == 'Detect':
-            return 20 # Mbps
+            return 30 # Mbps
             
         # 4.3 LEO -> LEO (同层 ISL)
         # 标准 LEO 星间链路，依然设为瓶颈，防止 Dijkstra 走捷径
         if type_u == 'LEO' and type_v == 'LEO':
-            return 20 # Mbps
+            return 30 # Mbps
 
         # 默认兜底
         return 10

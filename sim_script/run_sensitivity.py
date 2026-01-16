@@ -47,7 +47,7 @@ def run_experiment_with_gamma(gamma_val, req_count, topo_mgr, traffic_gen, vtm, 
     
     # 初始化算法
     algo = IGAStrategy()
-    algo_name = f"H-IGA-G{gamma_val}"
+    algo_name = f"H-IGA-Gamma{gamma_val}"
     
     # 2. 配置环境
     cfg = get_sim_config()

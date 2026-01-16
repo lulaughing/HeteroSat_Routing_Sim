@@ -95,15 +95,15 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
     cfg = get_sim_config()
     t = cfg['SIM_START']
     
-    # 1. 设定 H-IGA 参数 (降低拥塞敏感度，平衡路径长度与负载)
-    iga_fitness_module.GAMMA = 5.0 
+    # 1. 设定 H-IGA 参数 
+    iga_fitness_module.GAMMA = 3.0 
     iga_fitness_module.LAMBDA = 1.0
     
     # 2. 定义对比算法组
     algorithms = [
         (IGAStrategy(pop_size=25, max_iter=25, p_guide=0.7), "H-IGA"),
-        (SGAStrategy(pop_size=40, max_iter=30), "SGA"),
-        (DijkstraStrategy(weight_key='delay'), "Dijkstra")
+        (SGAStrategy(pop_size=30, max_iter=30), "SGA"),
+        (DijkstraStrategy(weight_key='static_delay'), "Dijkstra")
     ]
     
     results = []
@@ -153,25 +153,30 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
             if algo_name == "Dijkstra":
                 try:
                     # [修正] 物理隔离 v2.0：使用 Subgraph 视图 (非破坏性)
+                    # 依然保留这步，作为双重保险（物理层面的屏蔽）
                     valid_nodes = []
                     for n in G_phy_run.nodes():
-                        # 简单判断：名字里带 Facility 或 Ground 就算地面站
                         is_ground = 'Facility' in str(n) or 'Ground' in str(n)
-                        # 如果不是地面站，或者它是本次的起点/终点，则保留
                         if (not is_ground) or (n == src) or (n == dst):
                             valid_nodes.append(n)
                     
                     G_safe_view = G_phy_run.subgraph(valid_nodes)
                     
-                    path = nx.dijkstra_path(G_safe_view, src, dst, weight='delay')
-                    found = True
-                    note = "PathFound"
-                    
-                    # [日志] 记录 Dijkstra 路径
-                    log_path_details(log_files[algo_name], req, G_phy_run, path, None)
+                    # 🔴 [核心修正] 调用 algo (DijkstraStrategy 实例) 的 find_path 方法
+                    # 而不是直接调用 nx.dijkstra_path
+                    # 这样 src/routing/dijkstra.py 里的逻辑才会生效！
+                    path, _ = algo.find_path(G_safe_view, src, dst, req)
 
-                except nx.NetworkXNoPath:
-                    path = None; found = False; note = "NoPath"
+                    if path:
+                        found = True
+                        note = "PathFound"
+                        # [日志] 记录 Dijkstra 路径
+                        log_path_details(log_files[algo_name], req, G_phy_run, path, None)
+                    else:
+                        path = None; found = False; note = "NoPath"
+
+                except Exception as e: # 捕获更广泛的异常
+                    path = None; found = False; note = f"Error: {str(e)}"
             
             # =====================================================
             # 分支 2 & 3: H-IGA 和 SGA (分层架构)

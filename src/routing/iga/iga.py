@@ -19,7 +19,7 @@ from .iga_mutation import mutation
 alog = get_algo_logger()
 
 class IGAStrategy(RoutingStrategy):
-    def __init__(self, pop_size=30, max_iter=20, pc=0.8, pm=0.2, p_guide=0.8):
+    def __init__(self, pop_size=20, max_iter=20, pc=0.8, pm=0.2, p_guide=0.8):
         self.pop_size = pop_size
         self.max_iter = max_iter
         self.pc = pc

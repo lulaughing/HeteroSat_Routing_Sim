@@ -12,7 +12,8 @@ OUTPUT_DIR = Path(r"F:\HeteroSat_Routing_Sim\plot")
 
 
 # 定义不同负载对应的文件夹名称
-num_of_bizs_list = [10, 20, 30, 40, 50, 60, 80, 100, 120]
+# num_of_bizs_list = [10, 20, 30, 40, 50, 60, 80, 100, 120]
+num_of_bizs_list = [10, 30, 50, 80, 100, 150, 200, 250, 300, 400, 500, 600] #保持与run_load_analysis.py保持一致
 
 # 匹配所有 sensitivity_full_* 目录，按时间戳取最新
 pattern = BASE_DIR / "sensitivity_full_*"
@@ -156,16 +157,16 @@ def plot_dual_metrics(df):
     axes[1].set_xticks(unique_gammas)
     axes[1].set_xlim(min(unique_gammas)-0.5, max(unique_gammas)+0.5)
 
-    # [优化 3] 标记推荐值 (Gamma=10.0)
-    RECOMMENDED_GAMMA = 10.0
-    for ax in axes:
-        # 画竖线
-        ax.axvline(x=RECOMMENDED_GAMMA, color='#e74c3c', linestyle='--', linewidth=2, alpha=0.8)
-        # 添加文本标注 (仅在上方图添加，避免重复)
-        if ax == axes[0]:
-            ax.text(RECOMMENDED_GAMMA + 0.2, ax.get_ylim()[1]*0.95, 
-                    f'Selected $\gamma={int(RECOMMENDED_GAMMA)}$', 
-                    color='#e74c3c', fontweight='bold', ha='left')
+    # # [优化 3] 标记推荐值 (Gamma=10.0)
+    # RECOMMENDED_GAMMA = 10.0
+    # for ax in axes:
+    #     # 画竖线
+    #     ax.axvline(x=RECOMMENDED_GAMMA, color='#e74c3c', linestyle='--', linewidth=2, alpha=0.8)
+    #     # 添加文本标注 (仅在上方图添加，避免重复)
+    #     if ax == axes[0]:
+    #         ax.text(RECOMMENDED_GAMMA + 0.2, ax.get_ylim()[1]*0.95, 
+    #                 f'Selected $\gamma={int(RECOMMENDED_GAMMA)}$', 
+    #                 color='#e74c3c', fontweight='bold', ha='left')
 
     plt.tight_layout()
     
