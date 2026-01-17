@@ -58,9 +58,15 @@ class InterDomainAlgorithm(RoutingStrategy):
             used = d.get('used_bw', 0)
             remaining = capacity - used
             
-            # 如果剩余带宽不足，返回 None (视为断开)
+            # 如果剩余带宽不足，进行软约束惩罚 (Soft Constraint)
+            # 原逻辑: return None (直接断开)
+            # 新逻辑: 允许通过，但施加巨大代价，使其成为“最后选择”
+            bw_penalty = 1.0
             if remaining < req_bw:
-                return None
+                 # 代价因子: 缺口越大，代价越大
+                 # 例如缺 5M -> penalty = 1 + 5*10 = 51倍权重
+                 shortage = req_bw - remaining
+                 bw_penalty = 100.0 + (shortage * 10.0)
             
             # --- 步骤 2: 拥塞感知权值计算 (Weighting) ---
             # 获取虚拟边聚合指标
@@ -76,7 +82,7 @@ class InterDomainAlgorithm(RoutingStrategy):
             base_cost = (alpha * (delay / self.D_MAX)) + (beta * (loss / self.L_MAX))
             congestion_penalty = 1.0 + self.LAMBDA * math.exp(self.GAMMA * rho)
             
-            return base_cost * congestion_penalty
+            return base_cost * congestion_penalty * bw_penalty
 
         # --- 步骤 3: 最短路径搜索 ---
         try:

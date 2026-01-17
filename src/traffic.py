@@ -2,6 +2,7 @@
 """
 File: src/traffic.py
 Description: 业务流量生成器 (聚焦热点版: 极度收窄区域以引爆单点拥塞)
+修正: 引入固定种子与排序，确保流量生成的确定性与包含关系 (消除锯齿)
 """
 import random
 import logging
@@ -23,7 +24,12 @@ class TrafficGenerator:
         return in_lat and in_lon
 
     def generate_requests(self, G, num_requests=10):
-        nodes = list(G.nodes(data=True))
+        # [修改 1] 节点排序：确保每次运行的节点顺序绝对一致，防止随机性
+        nodes = sorted(list(G.nodes(data=True)), key=lambda x: str(x[0]))
+        
+        # [修改 2] 固定随机种子：确保 Gen(50) 的前 30 个业务与 Gen(30) 完全一致
+        # 这样不同负载下的业务就是“包含关系”而非“独立随机”，曲线会非常平滑
+        random.seed(20260116) 
         
         # =========================================================================
         # [核心修改]: 极度收窄地理范围，制造"针尖"效应

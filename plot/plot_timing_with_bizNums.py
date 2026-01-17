@@ -6,7 +6,8 @@ import re
 from pathlib import Path
 
 # ================== 配置 ==================
-LOGS_ROOT = r"F:\HeteroSat_Routing_Sim\sim_script\logs"
+# LOGS_ROOT = r"F:\HeteroSat_Routing_Sim\sim_script\logs"
+LOGS_ROOT = r"F:\HeteroSat_Routing_Sim\logs"
 PLOT_OUTPUT = r"F:\HeteroSat_Routing_Sim\plot\Load_Sensitivity_Comparison.png"
 # ==========================================
 

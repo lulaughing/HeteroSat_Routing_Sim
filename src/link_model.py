@@ -1,25 +1,28 @@
 # -*- coding: utf-8 -*-
 """
 File: src/link_model.py
-Description: 链路物理模型 (高敏感度/激进拥塞版)
+Description: 链路物理模型 (BPR 平滑版 - 适合学术论文)
+特点: 
+1. 使用 BPR 函数计算时延，曲线平滑，消除数据锯齿。
+2. 使用 Sigmoid 变体计算丢包，过载时渐进增长，数值更合理。
 """
 import math
 
 def apply_traffic_physics(G, u, v, added_bw):
     """
-    对图 G 中的边 (u, v) 施加流量，并根据激进的 M/M/1 模型更新物理属性
+    更新链路状态：基于 BPR (Bureau of Public Roads) 模型
     """
     if not G.has_edge(u, v):
         return
 
-    # 1. 累加流量
+    # 1. 流量累加
     current_used = G[u][v].get('used_bw', 0)
     new_used = current_used + added_bw
     G[u][v]['used_bw'] = new_used
     
-    # 2. 获取物理静态属性
-    # 注意: 这里的 capacity 默认值仅作备用，实际值由 topology.py 初始化时决定 (设为了 200)
+    # 2. 获取静态属性
     capacity = G[u][v].get('capacity', 200) 
+    if capacity <= 0: capacity = 1.0 # 防止除零
     
     if 'static_delay' not in G[u][v]:
         dist = G[u][v].get('distance', 1000)
@@ -28,48 +31,46 @@ def apply_traffic_physics(G, u, v, added_bw):
     static_delay = G[u][v]['static_delay']
 
     # 3. 计算负载率 (Utilization)
-    util = new_used / capacity if capacity > 0 else 1.0
+    util = new_used / capacity
     
-    # 4. 动态丢包率 (Loss Model) - 激进版
-    # 目的：让 Dijkstra 在严重拥塞时的 Loss 变得非常难看，体现物理世界的“丢包”
-    if util <= 0.9:
-        # 轻载：仅有微小的背景误码
-        dynamic_loss = 0.001  
-    elif util <= 1.0:
-        # 预警区 (0.9~1.0): 丢包率线性上升到 5%，模拟路由器的主动队列管理 (RED)
-        dynamic_loss = 0.001 + (util - 0.9) * 0.5 
+    # =================================================================
+    # 模型 A: 动态时延 (BPR 模型 - 经典学术模型)
+    # T = T0 * (1 + alpha * (Load/Cap)^beta)
+    # alpha=0.8, beta=4.0 是针对排队网络的经验参数
+    # 特点: util<1.0 时增长缓慢; util>1.0 时呈四次方增长，既平滑又有惩罚力
+    # =================================================================
+    alpha = 0.8
+    beta = 4.0
+    congestion_factor = 1.0 + alpha * (util ** beta)
+    
+    # 封顶限制 (防止数学爆炸，比如 util=10 时)
+    congestion_factor = min(congestion_factor, 100.0) 
+    
+    dynamic_delay = static_delay * congestion_factor
+    
+    # =================================================================
+    # 模型 B: 动态丢包 (平滑渐进模型)
+    # 目标: util=1.0 -> Loss=0.1% (几乎无损)
+    #       util=1.2 -> Loss=5%   (轻微拥塞)
+    #       util=1.5 -> Loss=15%  (严重拥塞)
+    #       util=2.0 -> Loss=30%  (不可用)
+    # =================================================================
+    base_loss = 0.001 # 0.1% 基础误码
+    
+    if util <= 1.0:
+        # 轻载区: 线性微增
+        dynamic_loss = base_loss + (util * 0.001) 
     else:
-        # 过载区 (>1.0): 严重拥塞，溢出即丢包
-        # 增加 1.5 倍惩罚系数，让丢包率飙升得更快
-        # 例如 util=2.0 时，Loss = 1 - 1/3 = 66%
-        dynamic_loss = 1.0 - (1.0 / (util * 1.5))
-        # 封顶 99% (物理上很难 100% 全丢，总有几个能挤过去)
-        dynamic_loss = min(dynamic_loss, 0.99)
-    
-    # 5. 动态时延 (Delay Model) - M/M/1 激进版
-    if util < 0.9:
-        # 轻载区: 几乎无排队
-        queue_factor = 1.0
-    elif util < 1.0:
-        # 重载区: 排队指数上升 (Standard M/M/1: 1 / (1-rho))
-        queue_factor = 1.0 / (1.0 - util)
-    else:
-        # 过载区 (>1.0): 堵死状态
-        # 线性爆炸：每超 10% 负载，排队因子增加 20
-        # 例如 util=2.0 (200%) -> queue_factor = 210 -> 时延增加 200ms+
-        queue_factor = 10.0 + (util - 1.0) * 200.0
-    
-    # 封顶防止数值溢出，但 500 倍已经足以让时延从 50ms 变成 25000ms
-    queue_factor = min(queue_factor, 500.0)
-    
-    # 假设基础处理/排队单位时延为 1ms，乘以排队因子
-    queuing_delay = 1.0 * queue_factor
-    
-    dynamic_delay = static_delay + queuing_delay
-    
-    # 6. 写回状态到图对象
+        # 过载区: 线性增长 (斜率 0.3)，比之前的指数爆炸温和得多
+        # Loss = 0.2% + (util-1.0) * 0.3
+        # ex: util=1.5 -> loss = 0.002 + 0.15 = 15.2%
+        overload = util - 1.0
+        dynamic_loss = 0.002 + (overload * 0.3)
+        
+        # 物理封顶 90%
+        dynamic_loss = min(dynamic_loss, 0.90)
+
+    # 5. 写回状态
     G[u][v]['loss'] = dynamic_loss
     G[u][v]['delay'] = dynamic_delay
-    
-    # 标记拥塞 (用于日志统计)
     G[u][v]['is_congested'] = (util > 1.0)

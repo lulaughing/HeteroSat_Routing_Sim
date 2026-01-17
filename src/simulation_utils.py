@@ -43,7 +43,20 @@ def manage_traffic(traffic_gen, G, current_time, count, traffic_dir):
         types = list(SERVICE_TYPES.keys())
         weights = [20, 30, 30, 20]
         
+        # [修改] 强制覆盖策略：确保每种业务类型至少出现一次 (如果 N 足够大)
+        # 1. 先用 random.choices 填充整个列表
         chosen_types = random.choices(types, weights=weights, k=len(raw_reqs))
+        
+        # 2. 如果请求数 >= 类型数，强制前 N 个请求覆盖所有类型
+        if len(raw_reqs) >= len(types):
+            # 将前 len(types) 个替换为全排列，确保每种至少一个
+            # 随机打乱顺序，避免特定类型总是出现在 ID=0
+            forced_types = list(types)
+            random.shuffle(forced_types)
+            for j in range(len(forced_types)):
+                chosen_types[j] = forced_types[j]
+                
+        # 3. 如果请求数 < 类型数 (极罕见)，则无法全覆盖，保持随机
         
         for i, req in enumerate(raw_reqs):
             s_type = chosen_types[i]

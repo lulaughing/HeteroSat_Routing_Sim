@@ -90,16 +90,25 @@ def calculate_fitness(G, path, constraints):
     f_base = 1.0 / (total_cost + 1e-5)
     
     # 2. 软约束惩罚 (Soft Constraints)
-    # 带宽不足 -> 毁灭性打击
+    # [优化] 带宽不足 -> 从毁灭性打击改为极强惩罚 (软约束)
+    # 允许算法在绝境下选择拥塞路径，而不是直接放弃
     req_bw = constraints.get('bandwidth', 0)
+    bw_penalty_coef = 1.0
+    
     if m['min_bw'] < req_bw:
-        return 1e-15 # 几乎为0，大概率被淘汰
+        # return 1e-15 # 原逻辑: 直接淘汰
+        # 新逻辑: 适应度降低 100~1000 倍
+        shortage = req_bw - m['min_bw']
+        # 惩罚系数 = 0.05 / (1 + 缺口) -> [微调] 放宽惩罚力度，从 0.001 提至 0.05
+        # 让算法更敢于尝试那些“只缺一点点带宽”的路径
+        bw_penalty_coef = 0.05 / (1.0 + shortage)
         
     # 时延超标 -> 渐进式惩罚
     req_delay = constraints.get('delay_req', float('inf'))
+    delay_penalty_coef = 1.0
+    
     if m['delay'] > req_delay:
         violation = (m['delay'] - req_delay) / (req_delay + 1e-5)
-        penalty_coef = 0.1 / (1.0 + violation * 10.0) 
-        return f_base * penalty_coef
-    
-    return f_base
+        delay_penalty_coef = 0.1 / (1.0 + violation * 10.0) 
+        
+    return f_base * bw_penalty_coef * delay_penalty_coef

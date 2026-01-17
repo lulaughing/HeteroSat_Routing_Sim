@@ -192,19 +192,19 @@ class TopologyManager:
         
         # 4.1 Detect -> LEO (层间汇报)
         # 如果 Detect 没法直连 MEO，它会试图传给 LEO
-        # 我们要把这个口子收紧，迫使大业务优先走 MEO 直连
+        # [优化] 提升到 50Mbps 以支持 Remote Sensing (35Mbps)
         if 'Detect' in types and 'LEO' in types:
-            return 30 # Mbps (Remote Sensing 50M 无法通过此路！)
+            return 50 # Mbps (原 30Mbps 会导致 35M 业务必丢包)
             
         # 4.2 Detect -> Detect (同层 ISL)
-        # 探测卫星间协作能力弱
+        # 探测卫星间协作能力弱 -> [优化] 提升到 50Mbps
         if type_u == 'Detect' and type_v == 'Detect':
-            return 30 # Mbps
+            return 50 # Mbps
             
         # 4.3 LEO -> LEO (同层 ISL)
-        # 标准 LEO 星间链路，依然设为瓶颈，防止 Dijkstra 走捷径
+        # 标准 LEO 星间链路 -> [优化] 提升到 50Mbps
         if type_u == 'LEO' and type_v == 'LEO':
-            return 30 # Mbps
+            return 50 # Mbps
 
         # 默认兜底
         return 10
