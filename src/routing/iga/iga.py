@@ -7,7 +7,7 @@ import random
 import numpy as np
 import networkx as nx
 from src.routing.strategy import RoutingStrategy
-from src.utils import get_algo_logger
+from src.utils import get_algo_logger, get_lazy_logger
 
 # 导入子模块 (保持不变，核心智能逻辑)
 from .iga_init import initialize_population
@@ -16,7 +16,7 @@ from .iga_selection import selection
 from .iga_crossover import crossover
 from .iga_mutation import mutation
 
-alog = get_algo_logger()
+alog = get_lazy_logger(get_algo_logger)
 
 class IGAStrategy(RoutingStrategy):
     def __init__(self, pop_size=20, max_iter=20, pc=0.8, pm=0.2, p_guide=0.8):
@@ -26,12 +26,13 @@ class IGAStrategy(RoutingStrategy):
         self.pm = pm
         self.p_guide = p_guide
 
-    def find_path(self, G, src, dst, constraints):
+    def find_path(self, G, src, dst, constraints=None):
         """
         IGA 寻路入口
         Args:
             dst: 单个节点 ID (由 simulation_utils 预选好的出口)
         """
+        constraints = constraints or {}
         req_id = constraints.get('id', 'N/A')
         
         # 1. 物理连通性检查
@@ -43,12 +44,16 @@ class IGAStrategy(RoutingStrategy):
         best_path = self.run(G, src, dst, constraints)
 
         if best_path:
-            # metrics = evaluate_path(G, best_path) # 可选，用于调试
-            return best_path, {}
+            return best_path, evaluate_path(G, best_path)
         else:
             return None, {}
 
+    def _evaluate_path(self, G, path):
+        """Backward-compatible wrapper used by older scripts/tests."""
+        return evaluate_path(G, path)
+
     def run(self, G, src, dst, constraints):
+        constraints = constraints or {}
         req_id = constraints.get('id', 'Unknown')
         
         # 1. 初始化 (使用方向引导 + KSP)

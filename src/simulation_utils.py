@@ -30,10 +30,10 @@ def manage_traffic(traffic_gen, G, current_time, count, traffic_dir):
     filepath = os.path.join(traffic_dir, filename)
     
     if os.path.exists(filepath):
-        print(f"   📂 [Shared] 加载公共流量: {filename}")
+        print(f"   [Shared] 加载公共流量: {filename}")
         with open(filepath, 'r') as f: return json.load(f)
     else:
-        print(f"   🎲 [Shared] 生成新流量 (高负载): {filename}")
+        print(f"   [Shared] 生成新流量 (高负载): {filename}")
         # 注意：这里调用 traffic_gen 时，建议在外部配置为生成“热点流量”
         raw_reqs = traffic_gen.generate_requests(G, num_requests=count)
         
@@ -82,12 +82,20 @@ def log_network_snapshot(nlog, G, time_step, algo_name):
             util = used / cap if cap > 0 else 0
             busy_links.append((u, v, used, cap, util))
     busy_links.sort(key=lambda x: x[4], reverse=True)
-    nlog.info(f"   📊 总流量: {total_used:.1f} Mbps | 活跃链路: {len(busy_links)}")
+    nlog.info(f"   总流量: {total_used:.1f} Mbps | 活跃链路: {len(busy_links)}")
     if busy_links:
-        nlog.info(f"   🔥 Top 5 Congested:")
+        nlog.info(f"   Top 5 Congested:")
         for i, (u, v, used, cap, util) in enumerate(busy_links[:5]):
             nlog.info(f"      {i+1}. {u}<->{v}: {util*100:.1f}%")
     nlog.info("")
+
+
+def _update_virtual_path_state(G_vir, vir_path, bandwidth):
+    for u_v, v_v in zip(vir_path[:-1], vir_path[1:]):
+        if G_vir.has_edge(u_v, v_v):
+            current_used = G_vir[u_v][v_v].get('used_bw', 0.0)
+            G_vir[u_v][v_v]['used_bw'] = current_used + bandwidth
+
 
 def decompose_and_execute_hierarchical(flog, G_phy, G_vir, vir_path, phy_to_vir, src, dst, qos, algo_intra, topo_mgr):
     """
@@ -110,8 +118,9 @@ def decompose_and_execute_hierarchical(flog, G_phy, G_vir, vir_path, phy_to_vir,
 
     total_est = sum([G_vir[vir_path[i]][vir_path[i+1]].get('delay', 10) for i in range(len(vir_path)-1)]) or 1
     
-    msg_head = f"[Global] Req: {src}->{dst} ({qos['service_type']}) | VirPath: {len(vir_path)} hops"
-    if flog: flog.info(f"   🌍 {msg_head}") 
+    service_type = qos.get('service_type', 'Unknown')
+    msg_head = f"[Global] Req: {src}->{dst} ({service_type}) | VirPath: {len(vir_path)} hops"
+    if flog: flog.info(f"   {msg_head}") 
     log.append(msg_head)
     
     current_phy = src
@@ -195,7 +204,7 @@ def decompose_and_execute_hierarchical(flog, G_phy, G_vir, vir_path, phy_to_vir,
     # --- 处理最后一跳 (终段) ---
     if current_phy != dst:
         last_req = qos.copy()
-        if flog: flog.info(f"      🔸 [终段] 域 {vir_path[-1]}: {current_phy}->{dst}")
+        if flog: flog.info(f"      [终段] 域 {vir_path[-1]}: {current_phy}->{dst}")
         
         # =========================================================
         # [新增] 2. 构建安全视图 (同上)
@@ -214,6 +223,7 @@ def decompose_and_execute_hierarchical(flog, G_phy, G_vir, vir_path, phy_to_vir,
     else:
         full_path.append(dst)
 
+    _update_virtual_path_state(G_vir, vir_path, qos.get('bandwidth', 0.0))
     return full_path, True, log, "Success"
 
 

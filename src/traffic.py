@@ -52,7 +52,7 @@ class TrafficGenerator:
         # 3. 兜底机制：如果太窄导致选不到点，稍微扩大一点范围或回退到全网
         if len(src_pool) < 2 or len(dst_pool) < 2:
             # 扩充到半球级，防止报错
-            print("   ⚠️ [Traffic] 热点区域节点不足，回退到宽域模式...")
+            print("   [Traffic] 热点区域节点不足，回退到宽域模式...")
             src_pool = [n for n, d in nodes if d.get('type') in ['LEO', 'Ground']]
             dst_pool = src_pool
 

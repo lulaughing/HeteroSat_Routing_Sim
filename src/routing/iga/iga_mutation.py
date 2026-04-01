@@ -7,9 +7,9 @@ import networkx as nx
 import random
 import math
 from src.routing.iga.iga_fitness import evaluate_path
-from src.utils import get_algo_logger
+from src.utils import get_algo_logger, get_lazy_logger
 
-alog = get_algo_logger()
+alog = get_lazy_logger(get_algo_logger)
 
 # [论文参数]
 P_BASE = 0.05      # 基准变异率
@@ -93,7 +93,7 @@ def mutation(G, path):
             # 恢复权重
             G[hot_u][hot_v]['delay'] = orig_weight
             
-            alog.debug(f"      🧬 [Mut] 拥塞规避: 移除 {hot_u}-{hot_v} (Util={max_u_val:.2f}), 找到旁路")
+            alog.debug(f"      [Mut] 拥塞规避: 移除 {hot_u}-{hot_v} (Util={max_u_val:.2f}), 找到旁路")
             return new_path
             
         except nx.NetworkXNoPath:

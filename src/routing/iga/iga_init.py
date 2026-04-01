@@ -7,9 +7,9 @@ import networkx as nx
 import random
 import re
 from itertools import islice
-from src.utils import get_algo_logger
+from src.utils import get_algo_logger, get_lazy_logger
 
-alog = get_algo_logger()
+alog = get_lazy_logger(get_algo_logger)
 
 def _calc_manhattan(u, v):
     """计算曼哈顿距离 (辅助方向引导)"""
@@ -53,9 +53,9 @@ def initialize_population(G, src, dst, pop_size, p_guide=0.8):
         for p in elites:
             if p not in population:
                 population.append(p)
-        alog.debug(f"   🌱 [Init] KSP 注入: 成功生成 {len(population)} 条精英路径")
+        alog.debug(f"   [Init] KSP 注入: 成功生成 {len(population)} 条精英路径")
     except Exception as e:
-        alog.debug(f"   ⚠️ [Init] KSP 注入失败: {e}")
+        alog.debug(f"   [Init] KSP 注入失败: {e}")
 
     # --- 2. 方向引导 (Direction Guided Random Walk) ---
     # 填充剩余种群

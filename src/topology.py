@@ -39,7 +39,7 @@ class TopologyManager:
                 self.access_data = cache['access']
                 self.stable_link_whitelist = cache.get('whitelist', set())
             if not self.stable_link_whitelist: self._compute_stable_topology()
-            self.logger.info(">> [Topology] ✅ 成功从缓存加载数据！")
+            self.logger.info(">> [Topology] 成功从缓存加载数据！")
         else:
             self.logger.info(">> [Topology] 未发现缓存，开始解析原始 STK 数据...")
             self._parse_raw_files()

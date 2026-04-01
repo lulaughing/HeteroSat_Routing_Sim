@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.topology import TopologyManager
 from src.traffic import TrafficGenerator
-from src.utils import get_logger, SESSION_DIR
+from src.utils import get_logger
 from src.routing.hierarchical_mapper import VirtualTopologyManager 
 from src.simulation_utils import (
     manage_traffic, 
@@ -142,9 +142,9 @@ def main():
     base_dir = os.path.join("logs", f"sensitivity_full_{session_time}")
     ensure_dir(base_dir)
     
-    print(f"🚀 [Full Sensitivity Analysis] Started.")
-    print(f"📂 Master Session Directory: {base_dir}")
-    print(f"📊 Loads: {LOAD_LIST}")
+    print(f"[Full Sensitivity Analysis] Started.")
+    print(f"Master Session Directory: {base_dir}")
+    print(f"Loads: {LOAD_LIST}")
     print(f"🎚️ Gammas: {GAMMAS_TO_TEST}")
     
     # ==========================================
@@ -201,7 +201,7 @@ def main():
     summary_df.to_csv(summary_path, index=False)
     
     print("\n" + "="*60)
-    print("✅ Full Analysis Completed!")
+    print("Full Analysis Completed!")
     print(f"📄 Grand Summary saved to: {summary_path}")
     print("="*60)
     

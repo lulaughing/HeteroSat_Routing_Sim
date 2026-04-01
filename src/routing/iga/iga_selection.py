@@ -4,9 +4,9 @@ File: src/routing/iga/iga_selection.py
 Description: 选择操作 (锦标赛策略)
 """
 import random
-from src.utils import get_algo_logger
+from src.utils import get_algo_logger, get_lazy_logger
 
-alog = get_algo_logger()
+alog = get_lazy_logger(get_algo_logger)
 
 def selection(population, fitness, k=None):
     """
@@ -28,6 +28,6 @@ def selection(population, fitness, k=None):
         
     # 抽样打印日志 (避免过于频繁)
     if random.random() < 0.1:
-        alog.debug(f"      🧬 [Select] 锦标赛完成. AvgFit: {avg_fit:.6f} -> 保留了 {len(selected)} 个父代")
+        alog.debug(f"      [Select] 锦标赛完成. AvgFit: {avg_fit:.6f} -> 保留了 {len(selected)} 个父代")
     
     return selected

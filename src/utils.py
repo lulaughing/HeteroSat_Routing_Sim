@@ -10,6 +10,29 @@ import sys
 from datetime import datetime
 from src.simulation_utils import get_sim_config
 
+
+def _configure_console_streams():
+    """Avoid hard failures on Windows consoles that cannot encode emoji."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None:
+            continue
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(errors='replace')
+        except TypeError:
+            try:
+                reconfigure(encoding=getattr(stream, 'encoding', None) or 'utf-8', errors='replace')
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+
+_configure_console_streams()
+
 # 基础日志根目录
 LOG_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
 if not os.path.exists(LOG_ROOT):
@@ -22,6 +45,7 @@ if not os.path.exists(LOG_ROOT):
 # 逻辑：检查 logs/current_session.txt，有则复用，无则新建
 # ==========================================
 ANCHOR_FILE = os.path.join(LOG_ROOT, "current_session.txt")
+_SESSION_DIR = None
 
 def _get_or_create_session_dir():
     # 1. 尝试读取锚点文件 (复用现有目录)
@@ -55,15 +79,51 @@ def _get_or_create_session_dir():
     try:
         with open(ANCHOR_FILE, 'w', encoding='utf-8') as f:
             f.write(new_dir)
-        print(f"✨ [System] New Experiment Session Created: {new_dir}")
+        print(f"[System] New Experiment Session Created: {new_dir}")
     except Exception as e:
-        print(f"⚠️ [System] Failed to update anchor file: {e}")
+        print(f"[System] Failed to update anchor file: {e}")
 
     return new_dir
 
-# 全局变量：Session 路径 (所有导入此模块的脚本共享)
-SESSION_DIR = _get_or_create_session_dir()
+def get_session_dir():
+    global _SESSION_DIR
+    if _SESSION_DIR is None:
+        _SESSION_DIR = _get_or_create_session_dir()
+    return _SESSION_DIR
+
+
+def reset_session_dir():
+    global _SESSION_DIR
+    _SESSION_DIR = None
+
+
+class _LazySessionPath(os.PathLike):
+    def __fspath__(self):
+        return get_session_dir()
+
+    def __str__(self):
+        return get_session_dir()
+
+    def __repr__(self):
+        return repr(get_session_dir())
+
+
+# 全局兼容对象：仅在真正使用路径时才创建 session。
+SESSION_DIR = _LazySessionPath()
 # ==========================================
+
+
+def _close_logger_handlers(logger):
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        try:
+            handler.flush()
+        except Exception:
+            pass
+        try:
+            handler.close()
+        except Exception:
+            pass
 
 
 def get_logger(name, filename, level=logging.INFO, console=True):
@@ -76,7 +136,8 @@ def get_logger(name, filename, level=logging.INFO, console=True):
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    logger.handlers = [] # 清除旧 handler 防止重复打印
+    logger.propagate = False
+    _close_logger_handlers(logger)
 
     formatter = logging.Formatter(
         '%(asctime)s - [%(name)s] - %(levelname)s - %(message)s',
@@ -84,7 +145,7 @@ def get_logger(name, filename, level=logging.INFO, console=True):
     )
 
     # 1. 文件 Handler (UTF-8编码)
-    file_path = os.path.join(SESSION_DIR, filename)
+    file_path = os.path.join(get_session_dir(), filename)
     fh = logging.FileHandler(file_path, encoding='utf-8')
     fh.setLevel(level)
     fh.setFormatter(formatter)
@@ -113,3 +174,26 @@ def get_algo_logger():
 def get_net_logger():
     """网络状态日志 (状态视角: 链路拥塞快照、带宽扣除记录)"""
     return get_logger('NET', 'net_state.log', level=logging.INFO, console=False)
+
+
+def setup_logger(level=logging.INFO):
+    """Backward-compatible helper used by older tests and scripts."""
+    return get_logger('SETUP', 'setup.log', level=level, console=True)
+
+
+class LazyLogger:
+    def __init__(self, factory):
+        self._factory = factory
+        self._logger = None
+
+    def _resolve(self):
+        if self._logger is None:
+            self._logger = self._factory()
+        return self._logger
+
+    def __getattr__(self, name):
+        return getattr(self._resolve(), name)
+
+
+def get_lazy_logger(factory):
+    return LazyLogger(factory)

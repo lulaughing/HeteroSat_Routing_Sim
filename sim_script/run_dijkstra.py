@@ -10,19 +10,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
-from src.utils import get_flow_logger, get_net_logger, SESSION_DIR
+from src.utils import get_session_dir
 from src.topology import TopologyManager
 from src.traffic import TrafficGenerator
 from src.routing.dijkstra import DijkstraStrategy
 from src.routing.iga.iga_fitness import evaluate_path
 from src.simulation_utils import manage_traffic, log_network_snapshot, ensure_dir, get_sim_config # <--- 引入 get_sim_config
 
-# 独立日志目录
-LOG_DIR = os.path.join(SESSION_DIR)
-ensure_dir(LOG_DIR)
-
 def main():
-    print(f"🚀 [Baseline] Running Dijkstra (Flat Topology)...")
+    print(f"[Baseline] Running Dijkstra (Flat Topology)...")
+    log_dir = get_session_dir()
+    ensure_dir(log_dir)
 
     # [新增] 获取配置
     cfg = get_sim_config()
@@ -31,13 +29,13 @@ def main():
     time_step = cfg['TIME_STEP']
     req_count = cfg['REQUESTS_PER_STEP']
     
-    print(f"   ⚙️ Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
+    print(f"   Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
     
     topo_mgr = TopologyManager()
     traffic_gen = TrafficGenerator(topo_mgr)
     
     # 扁平化路由，不需要 VTM 和 InterAlgo
-    algo = DijkstraStrategy(weight_key='delay')
+    algo = DijkstraStrategy(weight_key='static_delay')
     
     results = []
     
@@ -73,8 +71,8 @@ def main():
         # 为简化，这里暂不打印详细 log 到文件，只跑数据
     
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(LOG_DIR, "metrics_dijkstra.csv"), index=False)
-    print("✅ Dijkstra Finished.")
+    df.to_csv(os.path.join(log_dir, "metrics_dijkstra.csv"), index=False)
+    print("Dijkstra Finished.")
 
 if __name__ == "__main__":
     main()

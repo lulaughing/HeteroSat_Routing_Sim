@@ -39,9 +39,6 @@ from src.routing.sga import SGAStrategy
 from src.routing.dijkstra import DijkstraStrategy
 import src.routing.iga.iga_fitness as iga_fitness_module
 
-# 配置日志
-logger = get_logger("LoadAnalysis", "load_analysis.log")
-
 def log_path_details(filename, req, G_phy, path_phy, path_vir=None):
     """
     [新增] 通用路径日志记录函数
@@ -62,7 +59,7 @@ def log_path_details(filename, req, G_phy, path_phy, path_vir=None):
             f.write(f"  🌐 Virtual Path: {path_vir}\n")
         
         # 2. 记录物理路径
-        f.write(f"  🛣️ Physical Path: {path_phy}\n")
+        f.write(f"  Physical Path: {path_phy}\n")
         
         # 3. 记录物理链路详情 (带过载检查)
         if path_phy and len(path_phy) > 1:
@@ -79,7 +76,7 @@ def log_path_details(filename, req, G_phy, path_phy, path_vir=None):
                 d = edge_data.get('delay', -1)
                 
                 # 状态标记
-                status = "🔥OVERLOAD" if used > cap else "OK"
+                status = "OVERLOAD" if used > cap else "OK"
                 
                 # 安全打印 (防止 d 是 None 或非数字)
                 d_str = f"{d:.2f}" if isinstance(d, (int, float)) else str(d)
@@ -96,7 +93,7 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
     t = cfg['SIM_START']
     
     # 1. 设定 H-IGA 参数 
-    iga_fitness_module.GAMMA = 3.0 
+    iga_fitness_module.GAMMA = 2.0 
     iga_fitness_module.LAMBDA = 1.0
     
     # 2. 定义对比算法组
@@ -107,7 +104,7 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
     ]
     
     results = []
-    print(f"\n⚖️ [Load Test] Running at T={t}s, Load = {n_requests} flows...")
+    print(f"\n[Load Test] Running at T={t}s, Load = {n_requests} flows...")
 
     # A. 准备环境
     G_phy_base = topo_mgr.get_graph_at_time(t)
@@ -125,7 +122,7 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
         if os.path.exists(fname): os.remove(fname)
         log_files[name] = fname
     
-    print(f"   📂 Path logs will be saved to: {base_dir}")
+    print(f"   Path logs will be saved to: {base_dir}")
 
     # C. 遍历算法
     for algo, algo_name in algorithms:
@@ -137,22 +134,7 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
         for u, v, d in G_phy_run.edges(data=True):
             d['used_bw'] = 0.0
         
-        # [优化] 优先级重排序 (VIP模式)
-        # 为了降低大带宽业务(Remote_Sensing)的丢包率，我们将其排在前面处理
-        # 策略: Remote_Sensing (Priority=0.2, 但带宽大) -> 强制置顶
-        # 原始 Priority 定义: Telemetry(1.0) > Video(0.7) > Voice(0.5) > Sensing(0.2)
-        # 新的处理顺序: Sensing > Telemetry > Video > Voice
-        # 这样大流先占坑，小流填缝隙，能显著提高整体吞吐量和 Sensing 的成功率
-        
-        def custom_sort_key(req):
-            s_type = req.get('service_type', '')
-            if s_type == 'Remote_Sensing':
-                return 10.0 # 最高优
-            return req.get('priority', 0.0)
-            
-        requests_sorted = sorted(requests, key=custom_sort_key, reverse=True)
-        
-        pbar = tqdm(requests_sorted, desc=f"   Algo={algo_name}", leave=False)
+        pbar = tqdm(requests, desc=f"   Algo={algo_name}", leave=False)
         
         for req in pbar:
             src, dst = req['src'], req['dst']
@@ -229,7 +211,7 @@ def run_load_experiment(n_requests, topo_mgr, traffic_gen, vtm, base_dir):
 
             # --- 3. 结果严格判决 (数据平面) ---
             # 设置更严格的丢包率阈值 (5%)，超过此值认为业务质量不达标
-            LOSS_THRESHOLD = 1.0
+            LOSS_THRESHOLD = 0.05
             real_success = False
             path_metrics = {'delay': 0, 'loss': 1.0, 'max_util': 0.0}
 
@@ -276,15 +258,15 @@ def main():
     # ==========================================
     # 推荐的细化配置
     LOADS_TO_TEST = [10, 30, 50, 80, 100, 150, 200, 250, 300, 400, 500, 600]
-    # LOADS_TO_TEST = [300] # [Debug] 仅测试拥塞点，验证微调效果
     
-    print(f"🚀 [Load Analysis] Started (Strict Mode + Goodput + Full Logging).")
+    print(f"[Load Analysis] Started (Strict Mode + Goodput + Full Logging).")
     print(f"📈 Testing Load Levels: {LOADS_TO_TEST}")
+    logger = get_logger("LoadAnalysis", "load_analysis.log")
     
     session_time = time.strftime("%Y%m%d_%H%M%S")
     out_dir = os.path.join("logs", f"load_analysis_{session_time}")
     ensure_dir(out_dir)
-    print(f"📂 Results will be saved to: {out_dir}")
+    print(f"Results will be saved to: {out_dir}")
     
     # 初始化核心组件
     topo_mgr = TopologyManager()
@@ -300,7 +282,7 @@ def main():
             df = run_load_experiment(n, topo_mgr, traffic_gen, vtm, out_dir)
             
             # 打印本轮简报
-            print(f"\n📊 Summary for Load = {n}:")
+            print(f"\nSummary for Load = {n}:")
             for algo in ["H-IGA", "SGA", "Dijkstra"]:
                 sub = df[df['Algo'] == algo]
                 
@@ -324,7 +306,7 @@ def main():
                 
         except Exception as e:
             logger.error(f"Error at Load={n}: {e}")
-            print(f"❌ Error at Load={n}: {e}")
+            print(f"Error at Load={n}: {e}")
             import traceback
             traceback.print_exc()
             
@@ -333,7 +315,7 @@ def main():
     summary_path = os.path.join(out_dir, "summary_all_loads.csv")
     summary_df.to_csv(summary_path, index=False)
     
-    print(f"\n✅ All experiments finished. Final Summary saved to: {summary_path}")
+    print(f"\nAll experiments finished. Final Summary saved to: {summary_path}")
 
 if __name__ == '__main__':
     main()

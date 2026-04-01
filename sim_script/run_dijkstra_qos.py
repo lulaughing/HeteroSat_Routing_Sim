@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
-from src.utils import get_flow_logger, get_net_logger, get_logger, SESSION_DIR
+from src.utils import get_logger, get_session_dir
 from src.topology import TopologyManager
 from src.traffic import TrafficGenerator
 # [修改] 导入 QoS-Dijkstra 算法类 (需确保 src/routing/dijkstra_qos.py 存在)
@@ -19,14 +19,11 @@ from src.routing.dijkstra_qos import QoSDijkstraAlgorithm
 from src.routing.iga.iga_fitness import evaluate_path
 from src.simulation_utils import manage_traffic, log_network_snapshot, ensure_dir, get_sim_config
 
-# 独立日志目录 (复用 run_all.py 生成的 SESSION_DIR)
-LOG_DIR = os.path.join(SESSION_DIR)
-ensure_dir(LOG_DIR)
-# [新增] 算法详细日志
-alog = get_logger('ALGO_QOS', 'algo_qos_details.log', console=False)
-
 def main():
-    print(f"🚀 [Baseline] Running QoS-Dijkstra (CSPF)...")
+    print(f"[Baseline] Running QoS-Dijkstra (CSPF)...")
+    log_dir = get_session_dir()
+    ensure_dir(log_dir)
+    alog = get_logger('ALGO_QOS', 'algo_qos_details.log', console=False)
 
     # [配置] 获取仿真参数
     cfg = get_sim_config()
@@ -35,7 +32,7 @@ def main():
     time_step = cfg['TIME_STEP']
     req_count = cfg['REQUESTS_PER_STEP']
     
-    print(f"   ⚙️ Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
+    print(f"   Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
     
     topo_mgr = TopologyManager()
     traffic_gen = TrafficGenerator(topo_mgr)
@@ -46,7 +43,7 @@ def main():
     results = []
     
     # [新增] 记录详细路径信息
-    f_path = open(os.path.join(LOG_DIR, "dijkstra_qos_paths.txt"), 'w', encoding='utf-8')
+    f_path = open(os.path.join(log_dir, "dijkstra_qos_paths.txt"), 'w', encoding='utf-8')
     
     for t in range(sim_start, sim_start + sim_duration, time_step): 
         G = topo_mgr.get_graph_at_time(t)
@@ -101,10 +98,10 @@ def main():
     
     f_path.close()
     # 保存结果到 CSV
-    output_path = os.path.join(LOG_DIR, "metrics_dijkstra_qos.csv")
+    output_path = os.path.join(log_dir, "metrics_dijkstra_qos.csv")
     df = pd.DataFrame(results)
     df.to_csv(output_path, index=False)
-    print(f"✅ QoS-Dijkstra Finished. Results saved to {output_path}")
+    print(f"QoS-Dijkstra Finished. Results saved to {output_path}")
 
 if __name__ == "__main__":
     main()

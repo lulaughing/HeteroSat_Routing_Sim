@@ -16,7 +16,8 @@ class SGAStrategy(RoutingStrategy):
         self.pc = pc
         self.pm = pm
 
-    def find_path(self, G, src, dst, constraints):
+    def find_path(self, G, src, dst, constraints=None):
+        constraints = constraints or {}
         # 1. 连通性检查
         if not nx.has_path(G, src, dst):
             return None, {}
@@ -30,6 +31,7 @@ class SGAStrategy(RoutingStrategy):
             return None, {}
 
     def run(self, G, src, dst, constraints):
+        constraints = constraints or {}
         # --- 1. 极速初始化 (移除 KSP) ---
         population = []
         

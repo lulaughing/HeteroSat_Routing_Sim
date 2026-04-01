@@ -20,7 +20,7 @@ class TestCongestionScenario(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        print("\n=== 🛠️ 初始化拓扑与流量环境 ===")
+        print("\n=== 初始化拓扑与流量环境 ===")
         cls.topo_mgr = TopologyManager()
         cls.traffic_gen = TrafficGenerator(cls.topo_mgr)
         cls.time_step = 0
@@ -31,14 +31,14 @@ class TestCongestionScenario(unittest.TestCase):
         traffic_dir = "data/test_traffic"
         ensure_dir(traffic_dir)
         # 删除旧文件以确保逻辑更新
-        json_path = os.path.join(traffic_dir, f"requests_T{cls.time_step}_N{cls.req_count}_corridor.json")
+        json_path = os.path.join(traffic_dir, f"requests_T{cls.time_step}_N{cls.req_count}.json")
         if os.path.exists(json_path):
             os.remove(json_path)
             
         cls.requests = manage_traffic(cls.traffic_gen, cls.G, cls.time_step, cls.req_count, traffic_dir)
 
     def test_01_topology_bottleneck(self):
-        """测试 1: 物理链路带宽是否已被限制 (150/80 Mbps)"""
+        """测试 1: 物理链路带宽是否符合当前模型配置 (100/60 Mbps)"""
         print("\n[Test 1] 检查物理带宽限制...")
         
         meo_links = []
@@ -59,17 +59,17 @@ class TestCongestionScenario(unittest.TestCase):
         # 验证 MEO 骨干带宽
         if meo_links:
             avg_cap = sum(meo_links)/len(meo_links)
-            print(f"   > MEO-MEO 平均带宽: {avg_cap} Mbps (期望: 150)")
-            self.assertTrue(all(c <= 150 for c in meo_links), "MEO骨干带宽未正确限制！")
+            print(f"   > MEO-MEO 平均带宽: {avg_cap} Mbps (期望: 100)")
+            self.assertTrue(all(c <= 100 for c in meo_links), "MEO骨干带宽未正确限制！")
             
         # 验证接入带宽
         if detect_meo_links:
             avg_cap = sum(detect_meo_links)/len(detect_meo_links)
-            print(f"   > Detect-MEO 平均带宽: {avg_cap} Mbps (期望: 80)")
-            self.assertTrue(all(c <= 80 for c in detect_meo_links), "接入链路带宽未正确限制！")
+            print(f"   > Detect-MEO 平均带宽: {avg_cap} Mbps (期望: 60)")
+            self.assertTrue(all(c <= 60 for c in detect_meo_links), "接入链路带宽未正确限制！")
 
     def test_02_traffic_composition(self):
-        """测试 2: 业务比例是否符合高负载设定 (50% Sensing)"""
+        """测试 2: 业务比例是否符合当前加权随机配置"""
         print("\n[Test 2] 检查业务类型分布...")
         
         type_counts = Counter([r['service_type'] for r in self.requests])
@@ -79,8 +79,8 @@ class TestCongestionScenario(unittest.TestCase):
         
         # 验证 Remote_Sensing 比例
         sensing_ratio = type_counts.get('Remote_Sensing', 0) / total
-        print(f"   > Remote_Sensing 占比: {sensing_ratio:.2%} (期望: ~50%)")
-        self.assertGreater(sensing_ratio, 0.4, "高带宽业务比例不足！")
+        print(f"   > Remote_Sensing 占比: {sensing_ratio:.2%} (期望: ~20%)")
+        self.assertGreater(sensing_ratio, 0.15, "高带宽业务比例不足！")
 
     def test_03_traffic_corridor(self):
         """测试 3: 流量是否集中在地理走廊 (北美->东亚)"""
@@ -126,9 +126,9 @@ class TestCongestionScenario(unittest.TestCase):
             
             # 如果只有一个 MEO 邻居，H-IGA 也没辙
             if len(meo_neighbors) < 2:
-                print(f"     ⚠️ 警告: 物理瓶颈！该节点只有 1 个上行出口，算法无法规避拥塞。")
+                print(f"     警告: 物理瓶颈！该节点只有 1 个上行出口，算法无法规避拥塞。")
             else:
-                print(f"     ✅ 通过: 存在多路径 ({len(meo_neighbors)} 条)，算法有优化空间。")
+                print(f"     通过: 存在多路径 ({len(meo_neighbors)} 条)，算法有优化空间。")
 
 if __name__ == '__main__':
     unittest.main()

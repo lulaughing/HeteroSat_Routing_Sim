@@ -94,7 +94,7 @@ class InterDomainAlgorithm(RoutingStrategy):
             for i in range(len(path)-1):
                 total_est_delay += G_vir[path[i]][path[i+1]].get('delay', 0)
                 
-            return path, {'est_delay': total_est_delay}
+            return path, {'est_delay': total_est_delay, 'delay': total_est_delay}
             
         except nx.NetworkXNoPath:
             return None, {}

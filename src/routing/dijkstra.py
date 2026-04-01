@@ -49,7 +49,7 @@ class DijkstraStrategy(RoutingStrategy):
                 # print(f"\n[Dijkstra CHECK] Mode={self.weight_key}, Sample Weight({u}->{v})={w}")
                 # 如果 w > 100 (通常 static_delay 很小，约 5-50ms)，说明可能读错了
                 if w > 100:
-                    print(f"⚠️ 警告：检测到异常大的静态时延 ({w})，请检查 topology.py 初始化！")
+                    print(f"警告：检测到异常大的静态时延 ({w})，请检查 topology.py 初始化！")
                 self._logged_once = True
             
             return w

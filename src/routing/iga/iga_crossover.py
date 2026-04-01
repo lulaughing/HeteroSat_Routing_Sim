@@ -5,9 +5,9 @@ Description: 交叉操作 (完全复现论文双模交叉策略: 节点交换 + 
 """
 import random
 import networkx as nx
-from src.utils import get_algo_logger
+from src.utils import get_algo_logger, get_lazy_logger
 
-alog = get_algo_logger()
+alog = get_lazy_logger(get_algo_logger)
 
 def crossover(G, p1, p2):
     """
@@ -38,7 +38,7 @@ def crossover(G, p1, p2):
         c2 = p2[:idx2] + p1[idx1:]
         
         if random.random() < 0.05: 
-            alog.debug(f"      ❌ [Cross-1] 节点交换 {node}")
+            alog.debug(f"      [Cross-1] 节点交换 {node}")
         return c1, c2
         
     # --- 策略 2: 断点修补/重组法 (Fallback) ---
@@ -69,7 +69,7 @@ def crossover(G, p1, p2):
             c2 = p2[:cut2] + repair2
             
             if random.random() < 0.05:
-                alog.debug(f"      🔧 [Cross-2] 断点修补: {u1}->Dst, {u2}->Dst")
+                alog.debug(f"      [Cross-2] 断点修补: {u1}->Dst, {u2}->Dst")
                 
             return c1, c2
             

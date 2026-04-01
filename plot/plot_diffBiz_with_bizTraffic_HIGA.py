@@ -117,14 +117,8 @@ def process_metrics(latest_dir):
             avg_loss = group['Loss'].mean() * 100 # 转百分比
             
             # Goodput: 使用 SUM (该业务类型的总有效产出)
-            # 或者使用 MEAN (单流平均有效产出)
-            # 这里选用 MEAN 以便在同一坐标系下观察不同业务（虽然 Remote Sensing 还是会很高）
-            # 或者，我们可以画 PDR (Packet Delivery Ratio) = Success Rate
-            # 用户要求：有效吞吐量。
-            # 考虑到 Remote Sensing 是 35M，Voice 是 1M。
-            # 画 Mean Goodput 比较直观：看是否跑满。
-            
-            avg_goodput = group['Goodput'].mean()
+            # 这样可以看到随着负载增加，系统处理各类业务的总吞吐量都在上升
+            total_goodput = group['Goodput'].sum()
             
             all_data.append({
                 'TotalTraffic': total_traffic,
@@ -132,7 +126,7 @@ def process_metrics(latest_dir):
                 'ServiceType': s_type,
                 'AvgDelay': avg_delay,
                 'AvgLoss': avg_loss,
-                'AvgGoodput': avg_goodput
+                'TotalGoodput': total_goodput
             })
             
     return pd.DataFrame(all_data)
@@ -143,7 +137,7 @@ def plot_biz_sensitivity(df, save_path):
     fig, axes = plt.subplots(3, 1, figsize=(10, 14), sharex=True)
 
     metrics = [
-        ("AvgGoodput", "Avg Goodput per Flow (Mbps)", "(a) Average Goodput vs Traffic Volume (H-IGA)"),
+        ("TotalGoodput", "Total Goodput (Mbps)", "(a) Total Goodput vs Traffic Volume (H-IGA)"),
         ("AvgDelay", "Average Delay (ms)", "(b) Average End-to-End Delay vs Traffic Volume (H-IGA)"),
         ("AvgLoss", "Average Loss (%)", "(c) Average Packet Loss vs Traffic Volume (H-IGA)")
     ]

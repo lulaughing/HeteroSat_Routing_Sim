@@ -10,12 +10,16 @@ import re
 logger = logging.getLogger(__name__)
 
 # [论文参数] 区域划分粒度
-GRID_LAT_STEP = 45.0  # 纬度步长
-GRID_LON_STEP = 60.0  # 经度步长
+GRID_LAT_STEP = 10.0  # 进一步细化 (原 15.0)
+GRID_LON_STEP = 10.0  # 进一步细化 (原 20.0)
 
 class VirtualTopologyManager:
-    def __init__(self):
-        pass
+    def __init__(self, grid_configs=None):
+        leo_cfg = {}
+        if grid_configs:
+            leo_cfg = grid_configs.get('LEO', {})
+        self.grid_lat_step = float(leo_cfg.get('lat', GRID_LAT_STEP))
+        self.grid_lon_step = float(leo_cfg.get('lon', GRID_LON_STEP))
 
     def _calculate_sat_domain(self, node_name, attrs):
         """
@@ -31,11 +35,11 @@ class VirtualTopologyManager:
             return "Domain_Unknown"
             
         # 计算网格索引
-        lat_idx = int((lat + 90) / GRID_LAT_STEP)
-        lat_idx = min(lat_idx, int(180 / GRID_LAT_STEP) - 1)
+        lat_idx = int((lat + 90) / self.grid_lat_step)
+        lat_idx = min(lat_idx, int(180 / self.grid_lat_step) - 1)
         
-        lon_idx = int((lon + 180) / GRID_LON_STEP)
-        lon_idx = min(lon_idx, int(360 / GRID_LON_STEP) - 1)
+        lon_idx = int((lon + 180) / self.grid_lon_step)
+        lon_idx = min(lon_idx, int(360 / self.grid_lon_step) - 1)
         
         prefix = "LEO" if "LEO" in node_name else "Detect"
         return f"Virtual_{prefix}_Lat{lat_idx}_Lon{lon_idx}"
@@ -104,6 +108,7 @@ class VirtualTopologyManager:
             G_vir.add_edge(dom_a, dom_b, 
                            capacity=agg_cap,      
                            bandwidth=agg_cap,     
+                           used_bw=0.0,
                            delay=agg_delay,
                            loss=agg_loss,
                            link_count=link_count)

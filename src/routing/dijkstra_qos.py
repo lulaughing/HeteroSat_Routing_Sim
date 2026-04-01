@@ -71,14 +71,14 @@ class QoSDijkstraAlgorithm:
             path = nx.dijkstra_path(G, src, dst, weight=weight_function)
             
             if self.logger:
-                self.logger.info(f"[{self.name}] ✅ Success! Hops: {len(path)-1}. "
+                self.logger.info(f"[{self.name}] Success. Hops: {len(path)-1}. "
                                  f"Pruned: {pruned_bw_count} (BW), {pruned_node_count} (Node).")
             
             return path, True
             
         except nx.NetworkXNoPath:
             if self.logger:
-                self.logger.warning(f"[{self.name}] ❌ No path found! "
+                self.logger.warning(f"[{self.name}] No path found. "
                                     f"Pruned: {pruned_bw_count} (BW), {pruned_node_count} (Node).")
             return [], False
             

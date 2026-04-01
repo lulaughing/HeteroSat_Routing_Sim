@@ -6,15 +6,14 @@ Description: 单元测试 - 验证 MEO 接入拥塞下的算法行为差异 (SGA
 import sys
 import os
 import unittest
+import random
 import networkx as nx
 
 # 添加项目根目录到 sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.topology import TopologyManager
 from src.routing.sga import SGAStrategy
 from src.routing.iga.iga import IGAStrategy
-from src.simulation_utils import decompose_and_execute_hierarchical
 
 class TestRoutingMechanisms(unittest.TestCase):
     
@@ -45,19 +44,21 @@ class TestRoutingMechanisms(unittest.TestCase):
         self.G_phy.add_edge('LEO_B', 'MEO_01', capacity=100, used_bw=0, delay=10, loss=0.001) 
         
         # 模拟 TopologyManager 的更新逻辑
-        self.topo_mgr = TopologyManager()
-        def mock_update(G, u, v, bw):
-            if G.has_edge(u, v):
-                G[u][v]['used_bw'] += bw
-                util = G[u][v]['used_bw'] / G[u][v]['capacity']
-                # 激进的拥塞丢包模型 (模拟 link_model.py)
-                if util > 1.0: 
-                    G[u][v]['loss'] = 0.9  # 严重丢包
-                elif util > 0.8: 
-                    G[u][v]['loss'] = 0.1
-                else:
-                    G[u][v]['loss'] = 0.001
-        self.topo_mgr.update_link_state = mock_update
+        class MockTopologyManager:
+            @staticmethod
+            def update_link_state(G, u, v, bw):
+                if G.has_edge(u, v):
+                    G[u][v]['used_bw'] += bw
+                    util = G[u][v]['used_bw'] / G[u][v]['capacity']
+                    if util > 1.0:
+                        G[u][v]['loss'] = 0.9
+                    elif util > 0.8:
+                        G[u][v]['loss'] = 0.1
+                    else:
+                        G[u][v]['loss'] = 0.001
+
+        self.topo_mgr = MockTopologyManager()
+        random.seed(20260320)
 
     def test_01_meo_congestion_avoidance(self):
         """
@@ -74,31 +75,29 @@ class TestRoutingMechanisms(unittest.TestCase):
         print(f"   > Link A->MEO Util: {self.G_phy['LEO_A']['MEO_01']['used_bw']}% (Congested)")
         print(f"   > Link B->MEO Util: {self.G_phy['LEO_B']['MEO_01']['used_bw']}% (Free)")
         
-        # 2. 定义候选出口集合 (这是 decompose 传给算法的参数)
-        candidates = [('LEO_A', 'MEO_01'), ('LEO_B', 'MEO_01')]
-        
         # 3. 业务需求
         req = {'bandwidth': 10, 'delay_req': 1000, 'loss_req': 0.01}
         
         # --- 运行 SGA ---
-        # 预期: SGA 选 ['LEO_S', 'LEO_A']
+        # 预期: SGA 仍更偏向最近出口 A
         print("\n   [Running SGA]...")
         sga = SGAStrategy()
-        path_sga, _ = sga.find_path(self.G_phy, 'LEO_S', candidates, req)
+        path_sga, _ = sga.find_path(self.G_phy, 'LEO_S', 'MEO_01', req)
         print(f"   > SGA Decision: {path_sga}")
         
-        self.assertIn('LEO_A', path_sga, "SGA 逻辑错误：它应该贪婪地选择最近节点 A")
+        self.assertEqual(path_sga, ['LEO_S', 'LEO_A', 'MEO_01'])
         
         # --- 运行 H-IGA ---
-        # 预期: IGA 选 ['LEO_S', 'LEO_B']
+        # 预期: IGA 规避已过载的出口 A，改走 B
         print("\n   [Running H-IGA]...")
         iga = IGAStrategy()
-        path_iga, _ = iga.find_path(self.G_phy, 'LEO_S', candidates, req)
+        path_iga, _ = iga.find_path(self.G_phy, 'LEO_S', 'MEO_01', req)
         print(f"   > H-IGA Decision: {path_iga}")
         
         self.assertIn('LEO_B', path_iga, "H-IGA 失败：未能规避拥塞节点 A，请检查适应度函数参数！")
+        self.assertNotIn('LEO_A', path_iga, "H-IGA 不应继续走拥塞出口 A")
         
-        print("\n   ✅ 验证通过：算法行为差异符合预期。")
+        print("\n   验证通过：算法行为差异符合预期。")
 
 if __name__ == '__main__':
     unittest.main()

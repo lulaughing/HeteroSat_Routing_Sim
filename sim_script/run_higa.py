@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
-from src.utils import get_flow_logger, SESSION_DIR, get_net_logger
+from src.utils import get_flow_logger, get_net_logger, get_session_dir
 from src.topology import TopologyManager
 from src.traffic import TrafficGenerator
 from src.routing.hierarchical_mapper import VirtualTopologyManager
@@ -19,13 +19,12 @@ from src.routing.iga.iga_fitness import evaluate_path
 # <--- 引入 log_network_snapshot
 from src.simulation_utils import manage_traffic, decompose_and_execute_hierarchical, log_network_snapshot, ensure_dir, get_sim_config
 
-LOG_DIR = os.path.join(SESSION_DIR)
-ensure_dir(LOG_DIR)
-flog = get_flow_logger() # H-IGA 我们需要详细日志
-nlog = get_net_logger() # <--- 初始化网络状态日志
-
 def main():
-    print(f"🚀 [Experiment] Running H-IGA (The Proposed Method)...")
+    print(f"[Experiment] Running H-IGA (The Proposed Method)...")
+    log_dir = get_session_dir()
+    ensure_dir(log_dir)
+    flog = get_flow_logger() # H-IGA 我们需要详细日志
+    nlog = get_net_logger() # <--- 初始化网络状态日志
     # [新增] 获取配置
     cfg = get_sim_config()
     sim_start = cfg['SIM_START']
@@ -33,7 +32,7 @@ def main():
     time_step = cfg['TIME_STEP']
     req_count = cfg['REQUESTS_PER_STEP']
     
-    print(f"   ⚙️ Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
+    print(f"   Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
     
     topo_mgr = TopologyManager()
     traffic_gen = TrafficGenerator(topo_mgr)
@@ -45,7 +44,7 @@ def main():
     results = []
     
     # 记录详细路径信息
-    f_path = open(os.path.join(LOG_DIR, "h_iga_paths.txt"), 'w', encoding='utf-8')
+    f_path = open(os.path.join(log_dir, "h_iga_paths.txt"), 'w', encoding='utf-8')
 
     
     for t in range(sim_start, sim_start + sim_duration, time_step):
@@ -92,8 +91,8 @@ def main():
 
     f_path.close()
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(LOG_DIR, "metrics_higa.csv"), index=False)
-    print("✅ H-IGA Finished.")
+    df.to_csv(os.path.join(log_dir, "metrics_higa.csv"), index=False)
+    print("H-IGA Finished.")
 
 if __name__ == "__main__":
     main()

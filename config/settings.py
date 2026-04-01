@@ -22,6 +22,11 @@ DATA_DIRS = {
     'aer':       os.path.join(RAW_DATA_DIR, 'links_access_AER')
 }
 
+# Backward-compatible aliases used by older tests/scripts.
+EPHEMERIS_DIR = DATA_DIRS['ephemeris']
+ACCESS_DATA_DIR = DATA_DIRS['access']
+ACCESS_AER_DIR = DATA_DIRS['aer']
+
 # 缓存目录
 CACHE_DIR = PROCESSED_DATA_DIR
 

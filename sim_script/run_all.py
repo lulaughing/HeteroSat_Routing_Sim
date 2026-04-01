@@ -24,14 +24,14 @@ if 'HETEROSAT_TIME_STEP' not in os.environ:
 if 'HETEROSAT_REQUESTS_PER_STEP' not in os.environ:
     os.environ['HETEROSAT_REQUESTS_PER_STEP'] = '300' #业务条数
 
-from src.utils import SESSION_DIR, ANCHOR_FILE
+from src.utils import ANCHOR_FILE, get_session_dir
 
-def run_script(script_name):
+def run_script(script_name, session_dir):
     """运行单个仿真脚本"""
     script_path = os.path.join(ROOT_DIR, "sim_script", script_name)
     print(f"\n" + "="*60)
-    print(f"🚀 [Master] Starting: {script_name}")
-    print(f"📅 Session: {SESSION_DIR}")
+    print(f"[Master] Starting: {script_name}")
+    print(f"Session: {session_dir}")
     print("="*60)
     
     # 继承当前环境变量，确保 PYTHONPATH 正确
@@ -47,14 +47,15 @@ def run_script(script_name):
     process.wait()
     
     if process.returncode == 0:
-        print(f"✅ [Master] Finished: {script_name}")
+        print(f"[Master] Finished: {script_name}")
     else:
-        print(f"❌ [Master] Error in {script_name} (Exit Code: {process.returncode})")
+        print(f"[Master] Error in {script_name} (Exit Code: {process.returncode})")
     
     return process.returncode
 
 def main():
     t_start = time.time()
+    session_dir = get_session_dir()
     
     scripts = [
         "run_dijkstra.py", # 扁平化基线
@@ -64,22 +65,22 @@ def main():
     ]
     
     # 确保 session 目录已通过 src.utils 创建并锁定
-    print(f"🌟 [Master] Simulation Suite Started.")
-    print(f"📂 Results will be saved in: {SESSION_DIR}")
+    print(f"[Master] Simulation Suite Started.")
+    print(f"Results will be saved in: {session_dir}")
     
     try:
         # 顺序执行各算法脚本
         for script in scripts:
-            ret = run_script(script)
+            ret = run_script(script, session_dir)
             if ret != 0:
-                print(f"⚠️ [Master] Stopping execution due to error in {script}")
+                print(f"[Master] Stopping execution due to error in {script}")
                 # 注意：这里 break 后会直接进入 finally 块清理文件
                 break
                 
         duration = time.time() - t_start
         print(f"\n" + "="*60)
-        print(f"🏁 [Master] All Simulations Completed in {duration:.1f}s.")
-        print(f"📁 Session Directory: {SESSION_DIR}")
+        print(f"[Master] All Simulations Completed in {duration:.1f}s.")
+        print(f"Session Directory: {session_dir}")
         print("="*60)
 
     finally:
@@ -87,9 +88,9 @@ def main():
         if os.path.exists(ANCHOR_FILE):
             try:
                 os.remove(ANCHOR_FILE)
-                print(f"\n🧹 [Master] Anchor file cleared. Next run will create a new session.")
+                print(f"\n[Master] Anchor file cleared. Next run will create a new session.")
             except Exception as e:
-                print(f"⚠️ [Master] Failed to clear anchor file: {e}")
+                print(f"[Master] Failed to clear anchor file: {e}")
 
 if __name__ == "__main__":
     main()

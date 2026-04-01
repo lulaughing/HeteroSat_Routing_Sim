@@ -10,7 +10,7 @@ import pandas as pd
 from datetime import datetime
 from tqdm import tqdm
 # [修改 1] 引入 get_net_logger
-from src.utils import get_flow_logger, get_net_logger, SESSION_DIR
+from src.utils import get_flow_logger, get_net_logger, get_session_dir
 from src.topology import TopologyManager
 from src.traffic import TrafficGenerator
 from src.routing.hierarchical_mapper import VirtualTopologyManager
@@ -20,11 +20,10 @@ from src.routing.iga.iga_fitness import evaluate_path
 # [修改 2] 引入 log_network_snapshot
 from src.simulation_utils import manage_traffic, decompose_and_execute_hierarchical, log_network_snapshot, ensure_dir, get_sim_config
 
-LOG_DIR = os.path.join(SESSION_DIR)
-ensure_dir(LOG_DIR)
-
 def main():
-    print(f"🚀 [Baseline] Running SGA (Hierarchical)...")
+    print(f"[Baseline] Running SGA (Hierarchical)...")
+    log_dir = get_session_dir()
+    ensure_dir(log_dir)
 
     # 获取配置
     cfg = get_sim_config()
@@ -33,7 +32,7 @@ def main():
     time_step = cfg['TIME_STEP']
     req_count = cfg['REQUESTS_PER_STEP']
     
-    print(f"   ⚙️ Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
+    print(f"   Config: Start={sim_start}s, Duration={sim_duration}s, Step={time_step}s, Reqs={req_count}")
     
     # [修改 3] 初始化日志句柄
     flog = get_flow_logger() 
@@ -88,8 +87,8 @@ def main():
         log_network_snapshot(nlog, G_phy, t, "SGA")
 
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(LOG_DIR, "metrics_sga.csv"), index=False)
-    print("✅ SGA Finished.")
+    df.to_csv(os.path.join(log_dir, "metrics_sga.csv"), index=False)
+    print("SGA Finished.")
 
 if __name__ == "__main__":
     main()
